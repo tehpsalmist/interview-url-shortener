@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Url Shortener</title>
+  </head>
+  <body>
+    <h1>URL Shortener</h1>
+    <p>Enter a url and we'll shorten it for you.</p>
+    <form id="url-encoded-form" method="post" action="/url">
+      <label>url-encoded URL: <input id="url-encoded-url" name="url" type="url" /></label>
+    </form>
+    <form id="json-form" action="#">
+      <label>json URL: <input id="json-url" name="url" type="url" /></label>
+    </form>
+    <script type="text/javascript">
+      const form = document.querySelector('#json-form')
+
+      form.onsubmit = async (e) => {
+        e.preventDefault()
+
+        const url = document.querySelector('#json-url')?.value
+
+        if (!url) return
+
+        const response = await fetch('/url', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ url }),
+        }).then((r) => r.json())
+
+        console.log(response)
+      }
+    </script>
+  </body>
+</html>

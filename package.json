@@ -1,0 +1,39 @@
+{
+  "name": "interview-url-shortener",
+  "version": "1.0.0",
+  "description": "shorten urls in a particular kind of way",
+  "main": "index.ts",
+  "scripts": {
+    "start": "nodemon index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tehpsalmist/interview-url-shortener.git"
+  },
+  "keywords": [
+    "coding",
+    "test",
+    "interview",
+    "url",
+    "shortener"
+  ],
+  "author": "Ben Steward <bstewardcodes@gmail.com> (https://tehpsalmist.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tehpsalmist/interview-url-shortener/issues"
+  },
+  "homepage": "https://github.com/tehpsalmist/interview-url-shortener#readme",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "semi": false,
+    "printWidth": 120
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  }
+}
