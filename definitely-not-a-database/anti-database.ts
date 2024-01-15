@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'fs/promises'
 import { safeJSONParse } from '../src/utils'
 import { resolve } from 'node:path'
+import { enqueueShortCodeGenerator } from '../src/shortCodeGenerator'
 
 const DATA_PATH = resolve(__dirname, 'data.json')
 
@@ -115,18 +116,14 @@ export const startUpAntiDatabase = async (listener: AntiDatabaseListener): Promi
     enqueueAntiDatabaseUpdates()
   }
 
-  /**
-   * tl;dr: this server/app can recover from crashes without data loss
-   *
-   * The temptation here would be to go crazy with crash recovery logic,
-   * to pull all of the un-acked data and broadcast events for each of them,
-   * but the reality is that no clients will be listening anyway, so this
-   * is pointless. The mechanism for recovery is found in the connection
-   * of client to server. The moment a client connects, if it is still looking
-   * for a job's results, the server can send it out.
-   * Does this sound eerily like request/response? Yes. Will I be docked points
-   * in the interview for this? I guess I'll find out later.
-   */
+  // recover any interrupted jobs
+  Object.keys(antiDatabase.pending).forEach((originalUrl) => {
+    const shortCode = antiDatabase.pending[originalUrl]?.shortCode ?? ''
+
+    if (!antiDatabase.completed[shortCode]) {
+      enqueueShortCodeGenerator(originalUrl, shortCode)
+    }
+  })
 
   return null
 }
