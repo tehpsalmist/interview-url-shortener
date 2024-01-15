@@ -8,29 +8,164 @@
   <body>
     <h1>URL Shortener</h1>
     <p>Enter a url and we'll shorten it for you.</p>
-    <form id="url-encoded-form" method="post" action="/url">
-      <label>url-encoded URL: <input id="url-encoded-url" name="url" type="url" /></label>
+    <form id="url-form" action="#">
+      <label>New URL: <input id="url-input" name="url" type="url" /></label>
     </form>
-    <form id="json-form" action="#">
-      <label>json URL: <input id="json-url" name="url" type="url" /></label>
-    </form>
+    <div>
+      <h3>Your URLs</h3>
+      <ul id="url-list"></ul>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
     <script type="text/javascript">
-      const form = document.querySelector('#json-form')
+      const URL_STORAGE_KEY = 'interview-code-urls'
+      const form = document.querySelector('#url-form')
+      const urlInput = document.querySelector('#url-input')
+      const urlList = document.querySelector('#url-list')
 
+      const socket = io()
+
+      // handle form submission for a new URL
       form.onsubmit = async (e) => {
         e.preventDefault()
 
-        const url = document.querySelector('#json-url')?.value
+        const url = urlInput?.value
 
         if (!url) return
 
+        // use the POST endpoint to enqueue a url shortening
         const response = await fetch('/url', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ url }),
-        }).then((r) => r.json())
+        })
+          .then((r) => r.json())
+          .catch((err) => (err instanceof Error ? err : new Error(JSON.stringify(err))))
 
-        console.log(response)
+        // handle any errors
+        if (response instanceof Error) {
+          console.error("oops, didn't work")
+          return // probably should show the user the url was bad or something, but that wasn't the focus of the exercise
+        }
+
+        // store the url in localStorage so this client can track its own requests
+        saveUrlLocally({ url })
+        // mount new url on the page
+        mountUrlOnPage({ url })
+        urlInput.value = ''
+
+        // tell server this client is interested in events from this url
+        socket.emit('pendingUrlRequest', url)
+      }
+
+      // load existing urls from localStorage
+      let allUrls = getAllUrls()
+
+      // mount them all on the page so progress/status can be viewed
+      allUrls.forEach(mountUrlOnPage)
+
+      // listen to server events for any urls that haven't been fulfilled to this client
+      notifyServerOfPendingUrls()
+
+      /**
+       * THIS IS THE KEY EVENT FOR PURPOSES OF THIS EXERCISE
+       * This event signals a completed url shortening and carries the anticipated data to this client
+       */
+      socket.on('completed:insert', (data) => {
+        // only respond if it's something this client was waiting for
+        if (allUrls.some((u) => u.url === data.original)) {
+          saveUrlLocally({ url: data.original, shortenedURL: data.shortenedURL })
+          socket.emit('ack', data.shortCode)
+
+          updateProgress(data)
+        }
+      })
+
+      // neat little UI thing to show that the URL is being worked on
+      socket.on('pending:update', (data) => {
+        updateProgress(data)
+      })
+
+      // handle connection issues by resubscribing to any pending url events
+      socket.on('reconnect', () => {
+        notifyServerOfPendingUrls()
+      })
+
+      /**
+       * @param urlData {{ url: string; shortenedURL?: string }}
+       */
+      function mountUrlOnPage(urlData) {
+        const li = document.createElement('li')
+        const urlSpan = document.createElement('span')
+        const separatorSpan = document.createElement('span')
+        const shortenedSpan = document.createElement('span')
+
+        li.id = urlData.url
+
+        urlSpan.textContent = urlData.url
+
+        separatorSpan.textContent = ' | '
+
+        shortenedSpan.classList.add('short')
+
+        if (urlData.shortenedURL) {
+          shortenedSpan.textContent = urlData.shortenedURL
+        } else {
+          shortenedSpan.style.height = '12px'
+          shortenedSpan.style.width = '10px'
+          shortenedSpan.style.display = 'inline-block'
+          shortenedSpan.style.backgroundColor = 'limegreen'
+        }
+
+        li.append(urlSpan)
+        li.append(separatorSpan)
+        li.append(shortenedSpan)
+        urlList.append(li)
+      }
+
+      // fetch existing urls from localStorage
+      function getAllUrls() {
+        try {
+          const urls = JSON.parse(localStorage.getItem(URL_STORAGE_KEY) ?? '[]')
+          if (!Array.isArray(urls)) {
+            return []
+          }
+          return urls
+        } catch (e) {
+          return []
+        }
+      }
+
+      /**
+       * @param urlData {{ url: string; shortenedURL?: string }}
+       */
+      function saveUrlLocally(urlData) {
+        allUrls = allUrls.filter((u) => u.url !== urlData.url)
+        allUrls.push(urlData)
+        localStorage.setItem(URL_STORAGE_KEY, JSON.stringify(allUrls))
+      }
+
+      function updateProgress(data) {
+        const progressIndicator = document.querySelector(`#${CSS.escape(data.original)} > .short`)
+
+        if (!progressIndicator) return
+
+        if (data.shortenedURL) {
+          progressIndicator.style.width = 'auto'
+          progressIndicator.style.height = 'auto'
+          progressIndicator.style.backgroundColor = 'transparent'
+          progressIndicator.textContent = data.shortenedURL
+        } else {
+          progressIndicator.style.width = `${100 * data.progress}px`
+        }
+      }
+
+      function notifyServerOfPendingUrls() {
+        const pendingUrls = allUrls.filter((u) => !u.shortenedURL).map((u) => u.url)
+
+        if (pendingUrls.length) {
+          // special event that hooks the client and server up for specific urls
+          socket.emit('pendingUrlRequest', pendingUrls)
+        }
       }
     </script>
   </body>
