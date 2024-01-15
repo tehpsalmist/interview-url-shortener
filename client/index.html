@@ -87,7 +87,6 @@
 
       // handle connection issues by resubscribing to any pending url events
       socket.io.on('reconnect', () => {
-        console.log('ayo')
         notifyServerOfPendingUrls()
       })
 
