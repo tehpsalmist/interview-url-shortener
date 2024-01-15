@@ -86,7 +86,8 @@
       })
 
       // handle connection issues by resubscribing to any pending url events
-      socket.on('reconnect', () => {
+      socket.io.on('reconnect', () => {
+        console.log('ayo')
         notifyServerOfPendingUrls()
       })
 
@@ -97,7 +98,7 @@
         const li = document.createElement('li')
         const urlSpan = document.createElement('span')
         const separatorSpan = document.createElement('span')
-        const shortenedSpan = document.createElement('span')
+        const shortenedAnchor = document.createElement('a')
 
         li.id = urlData.url
 
@@ -105,20 +106,24 @@
 
         separatorSpan.textContent = ' | '
 
-        shortenedSpan.classList.add('short')
+        shortenedAnchor.classList.add('short')
 
         if (urlData.shortenedURL) {
-          shortenedSpan.textContent = urlData.shortenedURL
+          shortenedAnchor.textContent = urlData.shortenedURL
+          shortenedAnchor.href = urlData.shortenedURL
+          shortenedAnchor.target = '_blank'
+          shortenedAnchor.rel = 'noopener noreferrer'
         } else {
-          shortenedSpan.style.height = '12px'
-          shortenedSpan.style.width = '10px'
-          shortenedSpan.style.display = 'inline-block'
-          shortenedSpan.style.backgroundColor = 'limegreen'
+          shortenedAnchor.href = '#'
+          shortenedAnchor.style.height = '12px'
+          shortenedAnchor.style.width = '10px'
+          shortenedAnchor.style.display = 'inline-block'
+          shortenedAnchor.style.backgroundColor = 'limegreen'
         }
 
         li.append(urlSpan)
         li.append(separatorSpan)
-        li.append(shortenedSpan)
+        li.append(shortenedAnchor)
         urlList.append(li)
       }
 
@@ -154,6 +159,9 @@
           progressIndicator.style.height = 'auto'
           progressIndicator.style.backgroundColor = 'transparent'
           progressIndicator.textContent = data.shortenedURL
+          progressIndicator.href = urlData.shortenedURL
+          progressIndicator.target = '_blank'
+          progressIndicator.rel = 'noopener noreferrer'
         } else {
           progressIndicator.style.width = `${100 * data.progress}px`
         }
